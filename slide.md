@@ -273,7 +273,9 @@ model.generate(["What is Keras?"], max_length=16)
 model.export("gemma3_270m_tf.tflite", format="litert")
 ```
 
-**Note:** The TensorFlow team plans to keep `TFLiteConverter` in the ecosystem. The `Interpreter` API is what shifted to LiteRT.
+**Notes:**
+- The TensorFlow team plans to keep `TFLiteConverter` in the ecosystem. The `Interpreter` API is what shifted to LiteRT.
+- TF-backend exports include `Select TF ops` (e.g., `FlexStridedSlice`). On Android you must add `org.tensorflow:tensorflow-lite-select-tf-ops` to your dependencies. PyTorch-backend exports do not need this.
 
 ---
 
@@ -449,7 +451,7 @@ flowchart LR
 | Speed | Good | Faster — fused prefill/decode kernels |
 | Output quality | Good | Better — optimized attention backends |
 | Ease of use | Medium | High — drop-in chat generation |
-| Status | ✅ Available now | 🔄 PR #2705 under review (draft) |
+| Status | ✅ Available now | 🔄 PR #2705 — available on the `torch-backend-litert-minimal-litertlm` branch |
 
 **Bottom line:** LiteRT export eliminates the **model rewrite tax**. LiteRT-LM will additionally eliminate the **inference boilerplate tax**.
 
@@ -490,17 +492,20 @@ import keras_hub
 model = keras_hub.models.Gemma3CausalLM.from_preset("gemma3_1b")
 
 # Export as .litertlm bundle — PyTorch backend only
+# Bucketing: multiple prefill signatures for efficient prompt handling
 model.export(
     "model.litertlm",
     format="litertlm",
-    prefill_seq_len=128,
+    prefill_seq_len=[32, 64, 128, 256, 512, 1024],
 )
 ```
 
 **Requirements:**
 - `keras.config.backend() == "torch"` — JAX and TensorFlow backends are not supported
-- Fixed `prefill_seq_len` baked into the graph at export time
-- Output is FP32/BF16 — you must run `ai-edge-quantizer` + repackage for deployable sizes
+- `prefill_seq_len` is baked into the graph; pass a list for bucketing
+- **Bucketing increases export time** (~1.5× for 3 buckets) because each signature is traced separately, but model size increase is minimal (~0.07% for 3 extra signatures) since weights are shared
+- `quant_config` forwards to `litert_torch.convert()` for in-graph quantization
+- For post-export quantization, extract TFLite → `ai-edge-quantizer` → repackage
 
 ---
 
@@ -553,7 +558,7 @@ conversation.sendMessageAsync("Hello").collect { token ->
 | Limitation | Detail |
 |------------|--------|
 | **PyTorch backend only** | `keras.config.backend() == "torch"`. JAX/TensorFlow not supported. |
-| **Fixed prefill length** | `prefill_seq_len` baked into graph. Runtime must pad/truncate prompts. |
+| **Fixed prefill length** | `prefill_seq_len` is baked into graph, but **bucketing** (`list[int]`) lets the runtime pick the smallest fitting signature. **Measured 43% faster TTFT** on Pixel 9 for a 31-token prompt vs fixed-128. |
 | **Post-export quantization** | FP32/BF16 output. Must use `ai-edge-quantizer` + repackage for deployable sizes. |
 | **TFLite 2 GB limit** | Models >~2B params in FP32 exceed FlatBuffer. Must use INT8/INT4. |
 | **Emulator unsupported** | Fails on x86_64 emulators. Physical ARM64 devices required. |
@@ -618,11 +623,12 @@ conversation.sendMessageAsync("What is Keras?")
 |-----------|------|
 | `keras-team/keras` | Export logic (`keras/src/export/litert.py`) |
 | `keras-team/keras-hub` | Gemma presets, tokenizers, multimodal export tests |
-| `keras-team/keras-hub/pull/2705` | **LiteRT-LM export PR** (draft) — prefill/decode signatures, `.litertlm` bundle |
+| `keras-team/keras-hub/pull/2705` | **LiteRT-LM export PR** — prefill/decode signatures, `.litertlm` bundle (branch: `torch-backend-litert-minimal-litertlm`) |
 | `google-ai-edge/litert-torch` | PyTorch → LiteRT conversion stack |
 | `google-ai-edge/ai-edge-quantizer` | Post-training mixed-precision quantization |
 | `pctablet505/gemmademo-android-app` | Android demo using raw Interpreter |
-| `pctablet505/gemmademo-litertlm-android-app` | Sister demo using LiteRT-LM runtime |
+| `pctablet505/gemmademo-litertlm-android-app` | Android demo using LiteRT-LM runtime |
+| `pctablet505/litert-demo` | **This repo** — slides + verified export notebooks |
 
 ---
 
@@ -630,6 +636,8 @@ conversation.sendMessageAsync("What is Keras?")
 
 **Questions?**
 
-*Verified companion notebook: `verified_litert_export_demo.ipynb`*
+*Verified companion notebooks:*
+- `litert_export_demo.ipynb` — LiteRT (`.tflite`) export from TF & PyTorch backends
+- `litertlm_export_demo.ipynb` — LiteRT-LM (`.litertlm`) bundle export
 
 *Landscape diagram PNG exports available in `/content/mermaid_diagrams/`*
