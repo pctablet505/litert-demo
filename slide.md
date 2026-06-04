@@ -12,16 +12,25 @@ Supporting model export for LiteRT Runtime
 ---
 
 
-## Slide 2: The Two Taxes of On-Device Deployment
+## Slide 2: The Problem — Keras Ease vs. Deployment Reality
 
-**Without LiteRT export support, deploying a Keras model hits two separate taxes:**
+**Research in Keras is effortless:**
 
-| Tax | What It Is | Cost |
-|---|---|---|
-| **Tax 1: Framework Rewrite** | Re-implement your model in pure TensorFlow / PyTorch to satisfy the converter | 300+ lines, weeks of engineering |
-| **Tax 2: Post-Processing** | Rewrite tokenization, sampling, NMS, and rendering in Java/Kotlin/C++ | 200+ lines, fragile parity |
+```python
+# Keras: 5 lines
+model = keras_hub.models.Gemma3CausalLM.from_preset("gemma3_270m")
+model.compile(optimizer="adam", loss="sparse_categorical_crossentropy")
+model.fit(dataset, epochs=3)
+model.evaluate(val_dataset)
+model.save("my_model.keras")
+```
 
-**Every model iteration pays both taxes.**
+**But deploying on-device is not a "convert" step.** It is a massive engineering overhaul caused by two separate taxes:
+
+1. **Tax 1 — Framework Rewrite:** Re-implement the entire model in pure TensorFlow or PyTorch just to make it exportable.
+2. **Tax 2 — Post-Processing:** Rebuild tokenization, sampling, NMS, and rendering in Java/Kotlin/C++ because the runtime only gives you raw tensors.
+
+Same model. Same math. **100× more code, and you pay both taxes on every iteration.**
 
 ---
 
@@ -30,14 +39,19 @@ Supporting model export for LiteRT Runtime
 
 Incompatibility forces a manual bridge between iterative model discovery and optimized deployment.
 
-**Applied Researchers** | **Production Engineers**
----|---
-Iterative Experimentation | The "Rewrite Tax"
-• Tune hyperparameters in Keras | • Architecture study & mapping
-• Test multiple architectures | • Full re-implementation in TF (300+ lines)
-• Train on various datasets | • Custom training loop
-• Select the "Winner" model | • Weight parity verification
-• **"5 lines of code to start"** | • Debug numeric divergence
+| **Applied Researchers** | **Production Engineers** |
+|---|---|
+| **Iterative Experimentation** | **Tax 1: Framework Rewrite** |
+| • Tune hyperparameters in Keras | • Architecture study & mapping |
+| • Test multiple architectures | • Full re-implementation in TF (300+ lines) |
+| • Train on various datasets | • Custom training loop |
+| • Select the "Winner" model | • Weight parity verification |
+| **"5 lines of code to start"** | • Debug numeric divergence |
+| | **Tax 2: Post-Processing Gap** |
+| | • Tokenizer & detokenizer (SentencePiece JNI) |
+| | • Sampling strategies (Greedy, Top-K, Top-P) |
+| | • NMS, anchor decoding, mask upscaling |
+| | • Alpha-blend with camera preview |
 
 **Hand-off: Fragmented Workflow**
 
