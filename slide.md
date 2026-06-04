@@ -231,63 +231,45 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    subgraph RESEARCH["Research"]
-        direction TB
-        A["Keras / PyTorch / JAX<br/>5-50 lines of code"]
-    end
+    A["Research<br/>Keras / PyTorch / JAX<br/>5-50 lines of code"] --> B["Hand off to Engineering"]
 
-    subgraph TAX1["Tax 1: Framework Rewrite"]
-        direction TB
-        B1["Architecture study &<br/>mapping to pure TF"]
-        B2["Re-implement model<br/>300+ lines"]
-        B3["Custom checkpointing<br/>& logging"]
-        B4["Weight parity<br/>verification"]
-        B5["Debug numeric<br/>divergence"]
-        B6["Retrain if<br/>numerics diverge"]
-        B1 --> B2 --> B3 --> B4 --> B5 --> B6
-    end
+    B --> C["Tax 1: Framework Rewrite<br/>Re-implement in pure TF"]
+    C --> C1["Custom training loop<br/>300+ lines"]
+    C1 --> C2["Checkpointing & logging"]
+    C2 --> C3["Weight parity verification"]
+    C3 --> C4["Debug numeric divergence"]
+    C4 --> C5["Retrain if numerics diverge"]
 
-    subgraph TAX2["Tax 2: Post-Processing"]
-        direction TB
-        C1["Tokenizer<br/>(SentencePiece JNI)"]
-        C2["Sampling logic<br/>Greedy / Top-K / Top-P"]
-        C3["Padding masks &<br/>KV-cache tensors"]
-        C4["NMS / anchor<br/>decoding"]
-        C5["Mask upscaling &<br/>colormap"]
-        C6["Alpha-blend with<br/>camera preview"]
-        C1 --> C2 --> C3 --> C4 --> C5 --> C6
-    end
+    C5 --> D["Export toolchain<br/>.tflite / .onnx / .pte"]
 
-    subgraph EXPORT["Export & Debug"]
-        direction TB
-        D["Export toolchain<br/>.tflite / .onnx / .pte"]
-        E["Debug on-device<br/>mismatches<br/>Weeks lost"]
-        D --> E
-    end
+    D --> E["Tax 2: Post-Processing<br/>& Inference library burden"]
+    E --> E1["Tokenizer (SentencePiece JNI)"]
+    E1 --> E2["Sampling Greedy / Top-K / Top-P"]
+    E2 --> E3["Padding masks & KV-cache"]
+    E3 --> E4["NMS / anchor decoding"]
+    E4 --> E5["Mask upscaling & colormap"]
+    E5 --> E6["Alpha-blend with preview"]
 
-    A --> TAX1
-    A --> TAX2
-    B6 --> D
-    C6 --> D
+    E6 --> F["Final output<br/>on device"]
 
     style A fill:#e1f5fe
-    style B1 fill:#ffcdd2
-    style B2 fill:#ffcdd2
-    style B3 fill:#ffcdd2
-    style B4 fill:#ffcdd2
-    style B5 fill:#ffcdd2
-    style B6 fill:#ffcdd2
-    style C1 fill:#ffebee
-    style C2 fill:#ffebee
-    style C3 fill:#ffebee
-    style C4 fill:#ffebee
-    style C5 fill:#ffebee
-    style C6 fill:#ffebee
+    style C fill:#ffcdd2
+    style C1 fill:#ffcdd2
+    style C2 fill:#ffcdd2
+    style C3 fill:#ffcdd2
+    style C4 fill:#ffcdd2
+    style C5 fill:#ffcdd2
     style D fill:#fff3e0
-    style E fill:#ffcdd2
+    style E fill:#ffebee
+    style E1 fill:#ffebee
+    style E2 fill:#ffebee
+    style E3 fill:#ffebee
+    style E4 fill:#ffebee
+    style E5 fill:#ffebee
+    style E6 fill:#ffebee
 ```
 
-**Two taxes. Every model. Every iteration. Each tax is 6+ steps, and they run in parallel.**
+**Two taxes. Every model. Every iteration. Research → Rewrite → Export → Post-process. Neither tax is optional.**
 
 ---
 
