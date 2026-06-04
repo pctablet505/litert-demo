@@ -15,6 +15,7 @@ Supporting model export for LiteRT Runtime
 
 
 
+
 ## Slide 2: The Problem — Keras Ease vs. Deployment Reality
 
 **Research in Keras is effortless:**
@@ -36,6 +37,7 @@ model.save("my_model.keras")
 Same model. Same math. **100× more code, and you pay both taxes on every iteration.**
 
 ---
+
 
 
 
@@ -74,29 +76,8 @@ The gap between these worlds is why models die in Jupyter notebooks.
 
 
 
-## Slide 4: Why We Need Export to LiteRT?
 
-**The KerasHub trap:**
-- Currently KerasHub models are only usable through the Python API.
-- This makes it almost impossible for on-device AI developers to use the Keras ecosystem end-to-end.
-- Even teams that use Keras for R&D have no production deployment path.
-
-**The current dev process:**
-1. Train models with Keras
-2. Test on desktop
-3. Repeat the cycle until reaching a good solution
-4. **Then tell the engineering team to write the entire model from scratch in TensorFlow or PyTorch**
-5. Convert to device-supported runtime formats (ONNX, TFLite, ExecuTorch, etc.)
-
-**LiteRT export breaks this cycle.**
-
----
-
-
-
-
-
-## Slide 5: Tax 1 — The Framework Rewrite
+## Slide 4: Tax 1 — The Framework Rewrite
 
 ```python
 # PyTorch research is equally concise
@@ -135,7 +116,8 @@ Same model. Same math. **100× more code.**
 
 
 
-## Slide 6: Tax 1 — It Gets Worse With PyTorch or JAX
+
+## Slide 5: Tax 1 — It Gets Worse With PyTorch or JAX
 
 The rewrite tax is **not just a Keras → TF problem.**
 
@@ -154,7 +136,8 @@ The rewrite tax is **not just a Keras → TF problem.**
 
 
 
-## Slide 7: Tax 2 — Post-Processing on Device
+
+## Slide 6: Tax 2 — Post-Processing on Device
 
 Even after the model runs, **raw tensors are useless.** You must rebuild the "last mile" in Java/Kotlin/C++.
 
@@ -185,7 +168,8 @@ Even after the model runs, **raw tensors are useless.** You must rebuild the "la
 
 
 
-## Slide 8: Tax 2 — The Post-Processing Gap
+
+## Slide 7: Tax 2 — The Post-Processing Gap
 
 ```mermaid
 flowchart LR
@@ -208,7 +192,8 @@ flowchart LR
 
 
 
-## Slide 9: Alternatives — Domain-Specific Solutions
+
+## Slide 8: Alternatives — Domain-Specific Solutions
 
 **OpenCV, MediaPipe, Apple Vision, and QNN reduce post-processing, but they are domain-specific.**
 
@@ -241,7 +226,8 @@ flowchart LR
 
 
 
-## Slide 10: The Full Pain — Both Taxes Together
+
+## Slide 9: The Full Pain — Both Taxes Together
 
 ```mermaid
 flowchart LR
@@ -268,6 +254,30 @@ flowchart LR
 
 
 
+
+## Slide 10: Why We Need Export to LiteRT?
+
+**The KerasHub trap:**
+- Currently KerasHub models are only usable through the Python API.
+- This makes it almost impossible for on-device AI developers to use the Keras ecosystem end-to-end.
+- Even teams that use Keras for R&D have no production deployment path.
+
+**The current dev process:**
+1. Train models with Keras
+2. Test on desktop
+3. Repeat the cycle until reaching a good solution
+4. **Then tell the engineering team to write the entire model from scratch in TensorFlow or PyTorch**
+5. Convert to device-supported runtime formats (ONNX, TFLite, ExecuTorch, etc.)
+
+**LiteRT export breaks this cycle.**
+
+---
+
+
+
+
+
+
 ## Slide 11: What is LiteRT?
 
 LiteRT (formerly TensorFlow Lite) is Google's on-device runtime for neural network inference.
@@ -279,6 +289,7 @@ LiteRT (formerly TensorFlow Lite) is Google's on-device runtime for neural netwo
 - Hardware: CPU (XNNPACK), GPU (OpenCL/Vulkan), NPU (NNAPI)
 
 ---
+
 
 
 
@@ -300,6 +311,7 @@ flowchart LR
 Our goal: **one Keras model → multiple optimized runtimes** with zero rewrites.
 
 ---
+
 
 
 
@@ -350,6 +362,7 @@ model.export("model.tflite", format="litert")
 **Note:** Rewrite is required in PyTorch or TensorFlow; JAX export is not yet open-sourced.
 
 ---
+
 
 
 
@@ -423,6 +436,7 @@ flowchart TB
 
 
 
+
 ## Slide 15: Dual-Backend Export Pipelines
 
 Keras 3 is backend-agnostic. The export API uses different compilers depending on `KERAS_BACKEND`.
@@ -470,6 +484,7 @@ flowchart LR
 
 
 
+
 ## Slide 16: Verified Export Code — TensorFlow Backend
 
 ```python
@@ -494,6 +509,7 @@ model.export("gemma3_270m_tf.tflite", format="litert")
 - TF-backend exports include `Select TF ops` (e.g., `FlexStridedSlice`). On Android you must add `org.tensorflow:tensorflow-lite-select-tf-ops` to your dependencies. PyTorch-backend exports do not need this.
 
 ---
+
 
 
 
@@ -537,6 +553,7 @@ model.export(
 - We also hope to see `ai-edge-jax` open-sourced for JAX backend parity
 
 ---
+
 
 
 
@@ -606,6 +623,7 @@ A medical app and a chat demo have different accuracy budgets. A 270M model and 
 
 
 
+
 ## Slide 19: What You Bring — Android Application Code
 
 LiteRT gives you a `.tflite` flatbuffer. The rest is your product.
@@ -636,6 +654,7 @@ val text = tokenizer.detokenize(generatedTokens)
 - We give you the engine. You design the car.
 
 ---
+
 
 
 
@@ -682,6 +701,7 @@ flowchart LR
 **Bottom line:** LiteRT export eliminates the **model rewrite tax**. LiteRT-LM will additionally eliminate the **inference boilerplate tax**.
 
 ---
+
 
 
 
@@ -739,6 +759,7 @@ flowchart LR
 
 
 
+
 ## Slide 22: LiteRT-LM — What's Inside the Bundle
 
 A `.litertlm` file is not just a `.tflite` — it's a **Task Bundle** containing three assets:
@@ -763,6 +784,7 @@ flowchart LR
 The runtime calls `prefill` once per turn, then loops on `decode` until a stop token.
 
 ---
+
 
 
 
@@ -794,6 +816,7 @@ model.export(
 - For post-export quantization, extract TFLite → `ai-edge-quantizer` → repackage
 
 ---
+
 
 
 
@@ -847,6 +870,7 @@ conversation.sendMessageAsync("Hello").collect { token ->
 
 
 
+
 ## Slide 25: LiteRT-LM — Current Limitations
 
 | Limitation | Detail |
@@ -862,6 +886,7 @@ conversation.sendMessageAsync("Hello").collect { token ->
 | **Chat template baked** | Developers control content (roles, history) but not the template string. |
 
 ---
+
 
 
 
@@ -889,6 +914,7 @@ conversation.sendMessageAsync("What is Keras?")
 ```
 
 ---
+
 
 
 
@@ -922,6 +948,7 @@ The `tf.lite` module is deprecated. The existing `tf.lite.TFLiteConverter` API m
 
 
 
+
 ## Slide 28: Production Checklist
 
 - [ ] Choose backend: **TensorFlow** (proven) or **PyTorch** (explicit `input_signature`)
@@ -933,6 +960,7 @@ The `tf.lite` module is deprecated. The existing `tf.lite.TFLiteConverter` API m
 - [ ] Evaluate **LiteRT-LM** when PR #2705 lands — eliminates InferenceEngine boilerplate
 
 ---
+
 
 
 
@@ -952,6 +980,7 @@ The `tf.lite` module is deprecated. The existing `tf.lite.TFLiteConverter` API m
 | `pctablet505/litert-demo` | **This repo** — slides + verified export notebooks |
 
 ---
+
 
 
 
