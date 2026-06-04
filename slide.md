@@ -12,6 +12,8 @@ Supporting model export for LiteRT Runtime
 ---
 
 
+
+
 ## Slide 2: The Problem — Keras Ease vs. Deployment Reality
 
 **Research in Keras is effortless:**
@@ -33,6 +35,8 @@ model.save("my_model.keras")
 Same model. Same math. **100× more code, and you pay both taxes on every iteration.**
 
 ---
+
+
 
 
 ## Slide 3: The Workflow Gap — Research vs. Production
@@ -60,18 +64,53 @@ Incompatibility forces a manual bridge between iterative model discovery and opt
 ---
 
 
-## Slide 4: Tax 1 — The Framework Rewrite
 
-**Research in Keras is 5 lines:**
 
-```python
-# Keras: 5 lines
-model = keras_hub.models.Gemma3CausalLM.from_preset("gemma3_270m")
-model.compile(optimizer="adam", loss="sparse_categorical_crossentropy")
-model.fit(dataset, epochs=3)
-model.evaluate(val_dataset)
-model.save("my_model.keras")
-```
+## Slide 4: The Current Ecosystem — The "Silo" Problem
+
+AI development is currently divided into two distinct worlds:
+
+**Research (Python)**
+- Rapid iteration
+- Huge libraries (Keras, HuggingFace)
+- Unlimited compute resources
+- `model.generate()` in one line
+
+**Production (Edge)**
+- Strict constraints (memory, latency, thermal)
+- Different languages (C++, Java, Kotlin, Swift)
+- Limited compute
+- Raw tensor I/O only
+
+The gap between these worlds is why models die in Jupyter notebooks.
+
+---
+
+
+
+
+## Slide 5: Why We Need Export to LiteRT?
+
+**The KerasHub trap:**
+- Currently KerasHub models are only usable through the Python API.
+- This makes it almost impossible for on-device AI developers to use the Keras ecosystem end-to-end.
+- Even teams that use Keras for R&D have no production deployment path.
+
+**The current dev process:**
+1. Train models with Keras
+2. Test on desktop
+3. Repeat the cycle until reaching a good solution
+4. **Then tell the engineering team to write the entire model from scratch in TensorFlow or PyTorch**
+5. Convert to device-supported runtime formats (ONNX, TFLite, ExecuTorch, etc.)
+
+**LiteRT export breaks this cycle.**
+
+---
+
+
+
+
+## Slide 6: Tax 1 — The Framework Rewrite
 
 ```python
 # PyTorch research is equally concise
@@ -107,7 +146,9 @@ Same model. Same math. **100× more code.**
 ---
 
 
-## Slide 5: Tax 1 — It Gets Worse With PyTorch or JAX
+
+
+## Slide 7: Tax 1 — It Gets Worse With PyTorch or JAX
 
 The rewrite tax is **not just a Keras → TF problem.**
 
@@ -123,7 +164,9 @@ The rewrite tax is **not just a Keras → TF problem.**
 ---
 
 
-## Slide 6: Tax 2 — Post-Processing on Device
+
+
+## Slide 8: Tax 2 — Post-Processing on Device
 
 Even after the model runs, **raw tensors are useless.** You must rebuild the "last mile" in Java/Kotlin/C++.
 
@@ -151,7 +194,9 @@ Even after the model runs, **raw tensors are useless.** You must rebuild the "la
 ---
 
 
-## Slide 7: Tax 2 — The Post-Processing Gap
+
+
+## Slide 9: Tax 2 — The Post-Processing Gap
 
 ```mermaid
 flowchart LR
@@ -171,7 +216,9 @@ flowchart LR
 ---
 
 
-## Slide 8: Alternatives — Domain-Specific Solutions
+
+
+## Slide 10: Alternatives — Domain-Specific Solutions
 
 **OpenCV, MediaPipe, Apple Vision, and QNN reduce post-processing, but they are domain-specific.**
 
@@ -201,7 +248,9 @@ flowchart LR
 ---
 
 
-## Slide 9: The Full Pain — Both Taxes Together
+
+
+## Slide 11: The Full Pain — Both Taxes Together
 
 ```mermaid
 flowchart LR
@@ -215,7 +264,7 @@ flowchart LR
         F --> G["Export toolchain"]
         G --> H["Debug mismatches<br/>Weeks lost"]
         style C fill:#ffcdd2
-        style D fill:#ffcdd2
+        style D fill:#ffebee
         style H fill:#ffcdd2
     end
 ```
@@ -225,7 +274,44 @@ flowchart LR
 ---
 
 
-## Slide 10: How LiteRT Export Changes Everything
+
+
+## Slide 12: What is LiteRT?
+
+LiteRT (formerly TensorFlow Lite) is Google's on-device runtime for neural network inference.
+
+- Cross-platform: Android, iOS, Windows, Linux, Embedded, IoT
+- Languages: Java, Kotlin, JavaScript, C, C++
+- Format: FlatBuffer (`.tflite`) — memory-mapped for instant loading
+- Quantization: INT8, FP16, INT4 weight-only
+- Hardware: CPU (XNNPACK), GPU (OpenCL/Vulkan), NPU (NNAPI)
+
+---
+
+
+
+
+## Slide 13: The Runtime Landscape
+
+Keras models need to run on diverse high-performance runtimes.
+
+```mermaid
+flowchart LR
+    K["One Keras Model"] --> L["LiteRT<br/>Android / Google"]
+    K --> O["ONNX Runtime<br/>Cross-platform"]
+    K --> E["ExecuTorch<br/>PyTorch native"]
+    style L fill:#ccffcc
+    style K fill:#e1f5fe
+```
+
+Our goal: **one Keras model → multiple optimized runtimes** with zero rewrites.
+
+---
+
+
+
+
+## Slide 14: How LiteRT Export Changes Everything
 
 **Old workflow:**
 
@@ -272,121 +358,9 @@ model.export("model.tflite", format="litert")
 ---
 
 
-## Slide 11: LiteRT-LM Will Eliminate Tax 2 (Generative Models)
-
-LiteRT export eliminates the **model rewrite tax (Tax 1)**.
-
-LiteRT-LM additionally eliminates the **post-processing tax (Tax 2)** for generative models:
-
-| Burden | LiteRT Today | LiteRT-LM Future |
-|---|---|---|
-| Framework rewrite | ✅ Eliminated via `model.export` | ✅ Eliminated |
-| Tokenization | ❌ You bring (SentencePiece JNI) | ✅ Built-in |
-| Sampling (Greedy, Top-K, Top-P) | ❌ You write | ✅ Built-in |
-| KV-cache management | ❌ Manual tensors | ✅ Automatic |
-| Chat templating | ❌ You write | ✅ Runtime applies |
-
-```mermaid
-flowchart LR
-    subgraph TODAY["Today: LiteRT"]
-        direction TB
-        K1["Keras Model"] --> E1["model.export<br/>format='litert'"]
-        E1 --> R1["Raw Interpreter"]
-        R1 --> Y1["You write:<br/>Tokenizer + Sampler + KV Cache + UI"]
-        style K1 fill:#fff3e0
-        style E1 fill:#fff3e0
-        style R1 fill:#fff3e0
-    end
-    subgraph FUTURE["Future: LiteRT-LM"]
-        direction TB
-        K2["Keras Model"] --> E2["model.export<br/>format='litertlm'"]
-        E2 --> B2[".litertlm Bundle"]
-        B2 --> R2["LiteRT-LM Runtime"]
-        R2 --> Z1["Built-in:<br/>Tokenizer + Sampler + KV Cache + UI helpers"]
-        style K2 fill:#e8f5e9
-        style E2 fill:#e8f5e9
-        style B2 fill:#ccffcc
-        style R2 fill:#ccffcc
-    end
-```
-
-**Bottom line:** LiteRT export eliminates the **model rewrite tax**. LiteRT-LM will additionally eliminate the **inference boilerplate tax**.
-
----
 
 
-## Slide 12: The Current Ecosystem — The "Silo" Problem
-
-AI development is currently divided into two distinct worlds:
-
-**Research (Python)**
-- Rapid iteration
-- Huge libraries (Keras, HuggingFace)
-- Unlimited compute resources
-- `model.generate()` in one line
-
-**Production (Edge)**
-- Strict constraints (memory, latency, thermal)
-- Different languages (C++, Java, Kotlin, Swift)
-- Limited compute
-- Raw tensor I/O only
-
-The gap between these worlds is why models die in Jupyter notebooks.
-
----
-
-
-## Slide 13: Why We Need Export to LiteRT?
-
-**The KerasHub trap:**
-- Currently KerasHub models are only usable through the Python API.
-- This makes it almost impossible for on-device AI developers to use the Keras ecosystem end-to-end.
-- Even teams that use Keras for R&D have no production deployment path.
-
-**The current dev process:**
-1. Train models with Keras
-2. Test on desktop
-3. Repeat the cycle until reaching a good solution
-4. **Then tell the engineering team to write the entire model from scratch in TensorFlow or PyTorch**
-5. Convert to device-supported runtime formats (ONNX, TFLite, ExecuTorch, etc.)
-
-**LiteRT export breaks this cycle.**
-
----
-
-
-## Slide 14: What is LiteRT?
-
-LiteRT (formerly TensorFlow Lite) is Google's on-device runtime for neural network inference.
-
-- Cross-platform: Android, iOS, Windows, Linux, Embedded, IoT
-- Languages: Java, Kotlin, JavaScript, C, C++
-- Format: FlatBuffer (`.tflite`) — memory-mapped for instant loading
-- Quantization: INT8, FP16, INT4 weight-only
-- Hardware: CPU (XNNPACK), GPU (OpenCL/Vulkan), NPU (NNAPI)
-
----
-
-
-## Slide 15: The Runtime Landscape
-
-Keras models need to run on diverse high-performance runtimes.
-
-```mermaid
-flowchart LR
-    K["One Keras Model"] --> L["LiteRT<br/>Android / Google"]
-    K --> O["ONNX Runtime<br/>Cross-platform"]
-    K --> E["ExecuTorch<br/>PyTorch native"]
-    style L fill:#ccffcc
-    style K fill:#e1f5fe
-```
-
-Our goal: **one Keras model → multiple optimized runtimes** with zero rewrites.
-
----
-
-
-## Slide 16: High-Level Flow — Keras to Device
+## Slide 15: High-Level Flow — Keras to Device
 
 Detailed architecture matching the original PPT Slide 12/13:
 
@@ -409,7 +383,7 @@ flowchart TB
     end
 
     subgraph CONV["Converters"]
-        AJ["<span style='color:#d32f2f'>AI-Edge-Jax<br/>Not Open-source</span>"]
+        AJ["AI-Edge-Jax<br/>❌ Not Open-source"]
         LT["LiteRT-Torch"]
         subgraph TFB["Tensorflow"]
             TLC["tf.lite.TFLiteConverter"]
@@ -431,7 +405,7 @@ flowchart TB
             EXE["ExecuTorch"]
         end
         RAW["Raw Output<br/>Tensors"]
-        POST["<span style='color:#fff;background:#e57373;padding:2px 6px;border-radius:3px'>Post Processing</span>"]
+        POST["Post Processing<br/>⚠️ Manual burden"]
         FINAL["Final Output"]
         TFLITE --> LTI
         LTI --> RAW
@@ -451,7 +425,9 @@ flowchart TB
 ---
 
 
-## Slide 17: Dual-Backend Export Pipelines
+
+
+## Slide 16: Dual-Backend Export Pipelines
 
 Keras 3 is backend-agnostic. The export API uses different compilers depending on `KERAS_BACKEND`.
 
@@ -495,7 +471,9 @@ flowchart LR
 ---
 
 
-## Slide 18: Verified Export Code — TensorFlow Backend
+
+
+## Slide 17: Verified Export Code — TensorFlow Backend
 
 ```python
 import os
@@ -521,7 +499,9 @@ model.export("gemma3_270m_tf.tflite", format="litert")
 ---
 
 
-## Slide 19: Verified Export Code — PyTorch Backend
+
+
+## Slide 18: Verified Export Code — PyTorch Backend
 
 ```python
 import os
@@ -561,7 +541,9 @@ model.export(
 ---
 
 
-## Slide 20: Quantization — Two Paths, Your Choice
+
+
+## Slide 19: Quantization — Two Paths, Your Choice
 
 The export API gives you a clean, numerically correct FP32 model. What you do next is your call.
 
@@ -622,7 +604,9 @@ A medical app and a chat demo have different accuracy budgets. A 270M model and 
 ---
 
 
-## Slide 21: What You Bring — Android Application Code
+
+
+## Slide 20: What You Bring — Android Application Code
 
 LiteRT gives you a `.tflite` flatbuffer. The rest is your product.
 
@@ -652,6 +636,53 @@ val text = tokenizer.detokenize(generatedTokens)
 - We give you the engine. You design the car.
 
 ---
+
+
+
+
+## Slide 21: LiteRT-LM Will Eliminate Tax 2 (Generative Models)
+
+LiteRT export eliminates the **model rewrite tax (Tax 1)**.
+
+LiteRT-LM additionally eliminates the **post-processing tax (Tax 2)** for generative models:
+
+| Burden | LiteRT Today | LiteRT-LM Future |
+|---|---|---|
+| Framework rewrite | ✅ Eliminated via `model.export` | ✅ Eliminated |
+| Tokenization | ❌ You bring (SentencePiece JNI) | ✅ Built-in |
+| Sampling (Greedy, Top-K, Top-P) | ❌ You write | ✅ Built-in |
+| KV-cache management | ❌ Manual tensors | ✅ Automatic |
+| Chat templating | ❌ You write | ✅ Runtime applies |
+
+```mermaid
+flowchart LR
+    subgraph TODAY["Today: LiteRT"]
+        direction TB
+        K1["Keras Model"] --> E1["model.export<br/>format='litert'"]
+        E1 --> R1["Raw Interpreter"]
+        R1 --> Y1["You write:<br/>Tokenizer + Sampler + KV Cache + UI"]
+        style K1 fill:#fff3e0
+        style E1 fill:#fff3e0
+        style R1 fill:#fff3e0
+    end
+    subgraph FUTURE["Future: LiteRT-LM"]
+        direction TB
+        K2["Keras Model"] --> E2["model.export<br/>format='litertlm'"]
+        E2 --> B2[".litertlm Bundle"]
+        B2 --> R2["LiteRT-LM Runtime"]
+        R2 --> Z1["Built-in:<br/>Tokenizer + Sampler + KV Cache + UI helpers"]
+        style K2 fill:#e8f5e9
+        style E2 fill:#e8f5e9
+        style B2 fill:#ccffcc
+        style R2 fill:#ccffcc
+    end
+```
+
+**Bottom line:** LiteRT export eliminates the **model rewrite tax**. LiteRT-LM will additionally eliminate the **inference boilerplate tax**.
+
+---
+
+
 
 
 ## Slide 22: LiteRT vs LiteRT-LM — Clear Distinction
@@ -703,6 +734,8 @@ flowchart LR
 ---
 
 
+
+
 ## Slide 23: LiteRT-LM — What's Inside the Bundle
 
 A `.litertlm` file is not just a `.tflite` — it's a **Task Bundle** containing three assets:
@@ -727,6 +760,8 @@ flowchart LR
 The runtime calls `prefill` once per turn, then loops on `decode` until a stop token.
 
 ---
+
+
 
 
 ## Slide 24: LiteRT-LM Export API (PyTorch Backend Only)
@@ -755,6 +790,8 @@ model.export(
 - For post-export quantization, extract TFLite → `ai-edge-quantizer` → repackage
 
 ---
+
+
 
 
 ## Slide 25: LiteRT-LM Android Runtime
@@ -802,6 +839,8 @@ conversation.sendMessageAsync("Hello").collect { token ->
 ---
 
 
+
+
 ## Slide 26: LiteRT-LM — Current Limitations
 
 | Limitation | Detail |
@@ -817,6 +856,8 @@ conversation.sendMessageAsync("Hello").collect { token ->
 | **Chat template baked** | Developers control content (roles, history) but not the template string. |
 
 ---
+
+
 
 
 ## Slide 27: LiteRT-LM Before vs After
@@ -841,6 +882,8 @@ conversation.sendMessageAsync("What is Keras?")
 ```
 
 ---
+
+
 
 
 ## Slide 28: Upcoming Challenges & Opportunities
@@ -868,6 +911,8 @@ The `tf.lite` module is deprecated. The existing `tf.lite.TFLiteConverter` API m
 ---
 
 
+
+
 ## Slide 29: Production Checklist
 
 - [ ] Choose backend: **TensorFlow** (proven) or **PyTorch** (explicit `input_signature`)
@@ -879,6 +924,8 @@ The `tf.lite` module is deprecated. The existing `tf.lite.TFLiteConverter` API m
 - [ ] Evaluate **LiteRT-LM** when PR #2705 lands — eliminates InferenceEngine boilerplate
 
 ---
+
+
 
 
 ## Slide 30: References
@@ -895,6 +942,8 @@ The `tf.lite` module is deprecated. The existing `tf.lite.TFLiteConverter` API m
 | `pctablet505/litert-demo` | **This repo** — slides + verified export notebooks |
 
 ---
+
+
 
 
 ## Slide 31: Thank You
