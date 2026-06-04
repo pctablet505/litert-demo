@@ -29,12 +29,12 @@ model.evaluate(val_dataset)
 model.save("my_model.keras")
 ```
 
-**But deploying on-device is not a "convert" step.** It is a massive engineering overhaul caused by two separate taxes:
+**But deploying on-device is not a "convert" step.** It is a massive engineering overhaul caused by two separate burdens:
 
-1. **Tax 1 — Framework Rewrite:** Re-implement the entire model in pure TensorFlow or PyTorch just to make it exportable.
-2. **Tax 2 — Post-Processing:** Rebuild tokenization, sampling, NMS, and rendering in Java/Kotlin/C++ because the runtime only gives you raw tensors.
+1. **Burden 1 — Complete Framework Rewrite:** Re-implement the entire model in pure TensorFlow or PyTorch just to make it exportable.
+2. **Burden 2 — Post-Processing Pipeline:** Rebuild tokenization, sampling, NMS, and rendering in Java/Kotlin/C++ because the runtime only gives you raw tensors.
 
-Same model. Same math. **100× more code, and you pay both taxes on every iteration.**
+Same model. Same math. **100× more code, and you shoulder both burdens on every iteration.**
 
 ---
 
@@ -49,13 +49,13 @@ Incompatibility forces a manual bridge between iterative model discovery and opt
 
 | **Applied Researchers** | **Production Engineers** |
 |---|---|
-| **Iterative Experimentation** | **Tax 1: Framework Rewrite** |
+| **Iterative Experimentation** | **Burden 1: Complete Framework Rewrite** |
 | • Tune hyperparameters in Keras | • Architecture study & mapping |
 | • Test multiple architectures | • Full re-implementation in TF (300+ lines) |
 | • Train on various datasets | • Custom training loop |
 | • Select the "Winner" model | • Weight parity verification |
 | • `model.generate()` in one line | • Debug numeric divergence |
-| • Huge libraries (Keras, HuggingFace) | **Tax 2: Post-Processing Gap** |
+| • Huge libraries (Keras, HuggingFace) | **Burden 2: Post-Processing Gap** |
 | • Unlimited compute resources | • Tokenizer & detokenizer (SentencePiece JNI) |
 | | • Sampling strategies (Greedy, Top-K, Top-P) |
 | | • NMS, anchor decoding, mask upscaling |
@@ -77,7 +77,7 @@ The gap between these worlds is why models die in Jupyter notebooks.
 
 
 
-## Slide 4: Tax 1 — The Framework Rewrite
+## Slide 4: Burden 1 — The Complete Framework Rewrite
 
 ```python
 # PyTorch research is equally concise
@@ -117,9 +117,9 @@ Same model. Same math. **100× more code.**
 
 
 
-## Slide 5: Tax 1 — It Gets Worse With PyTorch or JAX
+## Slide 5: Burden 1 — It Gets Worse With PyTorch or JAX
 
-The rewrite tax is **not just a Keras → TF problem.**
+The rewrite burden is **not just a Keras → TF problem.**
 
 | Research Stack | On-Device Target | What Engineering Must Do |
 |---|---|---|
@@ -128,7 +128,7 @@ The rewrite tax is **not just a Keras → TF problem.**
 | **JAX** | `.tflite` | Rewrite in pure TF (no open-source JAX→TFLite converter) |
 | **PyTorch** | `.pte` (ExecuTorch) | Rewrite in PyTorch mobile, re-verify, export |
 
-**Every architecture change = restart the rewrite.**
+**Every architecture change restarts the rewrite.**
 
 ---
 
@@ -137,7 +137,7 @@ The rewrite tax is **not just a Keras → TF problem.**
 
 
 
-## Slide 6: Tax 2 — Post-Processing on Device
+## Slide 6: Burden 2 — The Post-Processing Pipeline
 
 Even after the model runs, **raw tensors are useless.** You must rebuild the "last mile" in Java/Kotlin/C++.
 
@@ -169,7 +169,7 @@ Even after the model runs, **raw tensors are useless.** You must rebuild the "la
 
 
 
-## Slide 7: Tax 2 — The Post-Processing Gap
+## Slide 7: Burden 2 — The Post-Processing Gap
 
 ```mermaid
 flowchart LR
@@ -227,13 +227,13 @@ flowchart LR
 
 
 
-## Slide 9: The Full Pain — Both Taxes Together
+## Slide 9: The Full Pain — Both Burdens Together
 
 ```mermaid
 flowchart LR
     A["Research<br/>Keras / PyTorch / JAX<br/>5-50 lines of code"] --> B["Hand off to Engineering"]
 
-    B --> C["Tax 1: Framework Rewrite<br/>Re-implement in pure TF"]
+    B --> C["Burden 1: Complete Framework Rewrite<br/>Re-implement in pure TF"]
     C --> C1["Custom training loop<br/>300+ lines"]
     C1 --> C2["Checkpointing & logging"]
     C2 --> C3["Weight parity verification"]
@@ -242,7 +242,7 @@ flowchart LR
 
     C5 --> D["Export toolchain<br/>.tflite / .onnx / .pte"]
 
-    D --> E["Tax 2: Post-Processing<br/>& Inference library burden"]
+    D --> E["Burden 2: Post-Processing<br/>& Inference library burden"]
     E --> E1["Tokenizer (SentencePiece JNI)"]
     E1 --> E2["Sampling Greedy / Top-K / Top-P"]
     E2 --> E3["Padding masks & KV-cache"]
@@ -269,7 +269,7 @@ flowchart LR
     style E6 fill:#ffebee
 ```
 
-**Two taxes. Every model. Every iteration. Research → Rewrite → Export → Post-process. Neither tax is optional.**
+**Two burdens. Every model. Every iteration. Research → Rewrite → Export → Post-process. Neither burden is optional.**
 
 ---
 
@@ -292,7 +292,7 @@ flowchart LR
 4. **Then tell the engineering team to write the entire model from scratch in TensorFlow or PyTorch**
 5. Convert to device-supported runtime formats (ONNX, TFLite, ExecuTorch, etc.)
 
-**LiteRT export breaks this cycle.**
+**LiteRT export lifts both burdens.**
 
 ---
 
@@ -348,9 +348,9 @@ Our goal: **one Keras model → multiple optimized runtimes** with zero rewrites
 flowchart LR
     A["Research in Keras"] --> B["Finalize architecture"]
     B --> C["Hand off to engineering"]
-    C --> D["Tax 1: Rewrite in pure TF"]
+    C --> D["Burden 1: Rewrite in pure TF"]
     D --> E["Retrain / debug parity"]
-    E --> F["Tax 2: Write post-processing<br/>Tokenizer, sampler, NMS, UI"]
+    E --> F["Burden 2: Write post-processing<br/>Tokenizer, sampler, NMS, UI"]
     F --> G["Export to .tflite"]
     style C fill:#ffcccc
     style D fill:#ffcccc
@@ -683,15 +683,15 @@ val text = tokenizer.detokenize(generatedTokens)
 
 
 
-## Slide 20: LiteRT-LM Will Eliminate Tax 2 (Generative Models)
+## Slide 20: LiteRT-LM Will Eliminate Burden 2 (Generative Models)
 
-LiteRT export eliminates the **model rewrite tax (Tax 1)**.
+LiteRT export eliminates the **model rewrite burden (Burden 1)**.
 
-LiteRT-LM additionally eliminates the **post-processing tax (Tax 2)** for generative models:
+LiteRT-LM additionally eliminates the **post-processing burden (Burden 2)** for generative models:
 
 | Burden | LiteRT Today | LiteRT-LM Future |
 |---|---|---|
-| Framework rewrite | ✅ Eliminated via `model.export` | ✅ Eliminated |
+| Complete framework rewrite | ✅ Eliminated via `model.export` | ✅ Eliminated |
 | Tokenization | ❌ You bring (SentencePiece JNI) | ✅ Built-in |
 | Sampling (Greedy, Top-K, Top-P) | ❌ You write | ✅ Built-in |
 | KV-cache management | ❌ Manual tensors | ✅ Automatic |
@@ -721,7 +721,7 @@ flowchart LR
     end
 ```
 
-**Bottom line:** LiteRT export eliminates the **model rewrite tax**. LiteRT-LM will additionally eliminate the **inference boilerplate tax**.
+**Bottom line:** LiteRT export eliminates the **model rewrite burden**. LiteRT-LM will additionally eliminate the **inference boilerplate burden**.
 
 ---
 
@@ -774,7 +774,7 @@ flowchart LR
 | Ease of use | Medium | High — drop-in chat generation |
 | Status | ✅ Available now | 🔄 PR #2705 — available on the `torch-backend-litert-minimal-litertlm` branch |
 
-**Bottom line:** LiteRT export eliminates the **model rewrite tax**. LiteRT-LM will additionally eliminate the **inference boilerplate tax**.
+**Bottom line:** LiteRT export eliminates the **model rewrite burden**. LiteRT-LM will additionally eliminate the **inference boilerplate burden**.
 
 ---
 
@@ -980,7 +980,7 @@ The `tf.lite` module is deprecated. The existing `tf.lite.TFLiteConverter` API m
 - [ ] For mixed-precision: run `ai-edge-quantizer` with your own component-scoped recipes
 - [ ] Write Android code for: tokenizer, padding mask, sampler, detokenizer, UI
 - [ ] For LiteRT-LM: ensure PyTorch backend, export `.litertlm`, test on physical ARM64 device
-- [ ] Evaluate **LiteRT-LM** when PR #2705 lands — eliminates InferenceEngine boilerplate
+- [ ] Evaluate **LiteRT-LM** when PR #2705 lands — lifts the inference boilerplate burden
 
 ---
 
