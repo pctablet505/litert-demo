@@ -195,7 +195,7 @@ flowchart LR
 
 ## Slide 8: Alternatives — Domain-Specific Solutions
 
-**OpenCV, MediaPipe, Apple Vision, and QNN reduce post-processing, but they are domain-specific.**
+**OpenCV, MediaPipe, ONNX, Ultralytics — they all reduce friction for specific problems, but leave you stranded the moment you step outside their assumptions.**
 
 | Alternative | What They Give You | The Limitation |
 |---|---|---|
@@ -203,13 +203,15 @@ flowchart LR
 | **MediaPipe Tasks** | Bundled tokenizer + NMS + rendering | Closed set of Google models. Cannot bring your own architecture. |
 | **Apple Vision** | `VNRecognizeTextRequest`, `VNDetectRectangles` | iOS-only, black-box models, no custom weights. |
 | **Qualcomm QNN** | SNPE execution + some fused ops | Qualcomm-only. Generative post-processing still manual. |
-| **ONNX Runtime Mobile** | Cross-platform inference | Raw tensors only. Tokenization, sampling, NMS still your problem. |
+| **ONNX Runtime Mobile** | Cross-platform inference from PyTorch export | Raw tensors only. Post-processing (NMS, anchors, masks) is still your problem. |
+| **Ultralytics YOLO** | Easy train → export → detect in Python | Export strips away post-processing. On-device you must rewrite NMS, anchor decoding, and confidence filtering in C++/Java. YOLO heads are not generic. |
 
 ```mermaid
 flowchart LR
     subgraph SPECIFIC["Domain-Specific: Works Great"]
         A["MediaPipe Face Mesh"] --> B["Built-in landmarks + rendering"]
         C["OpenCV DNN + NMS"] --> D["Built-in boxes + filtering"]
+        Y["Ultralytics YOLO<br/>Python notebook"] --> Z["Easy train/export/detect"]
     end
     subgraph CUSTOM["Your Custom Model: Falls Through"]
         E["Your LLM / Detector / Segmenter"] --> F["❌ No tokenizer<br/>❌ No sampler<br/>❌ No NMS for your anchors<br/>❌ No rendering"]
@@ -218,7 +220,7 @@ flowchart LR
     end
 ```
 
-**The moment your problem deviates from their assumptions — custom anchors, new tokenizer, multimodal architecture — you fall back to manual everything.**
+**The moment your problem deviates from their assumptions — custom anchors, new tokenizer, multimodal architecture, or even just running YOLO outside Python — you fall back to manual everything.**
 
 ---
 
