@@ -14,6 +14,7 @@ Supporting model export for LiteRT Runtime
 
 
 
+
 ## Slide 2: The Problem — Keras Ease vs. Deployment Reality
 
 **Research in Keras is effortless:**
@@ -39,6 +40,7 @@ Same model. Same math. **100× more code, and you pay both taxes on every iterat
 
 
 
+
 ## Slide 3: The Workflow Gap — Research vs. Production
 
 Incompatibility forces a manual bridge between iterative model discovery and optimized deployment.
@@ -50,37 +52,19 @@ Incompatibility forces a manual bridge between iterative model discovery and opt
 | • Test multiple architectures | • Full re-implementation in TF (300+ lines) |
 | • Train on various datasets | • Custom training loop |
 | • Select the "Winner" model | • Weight parity verification |
-| **"5 lines of code to start"** | • Debug numeric divergence |
-| | **Tax 2: Post-Processing Gap** |
-| | • Tokenizer & detokenizer (SentencePiece JNI) |
+| • `model.generate()` in one line | • Debug numeric divergence |
+| • Huge libraries (Keras, HuggingFace) | **Tax 2: Post-Processing Gap** |
+| • Unlimited compute resources | • Tokenizer & detokenizer (SentencePiece JNI) |
 | | • Sampling strategies (Greedy, Top-K, Top-P) |
 | | • NMS, anchor decoding, mask upscaling |
 | | • Alpha-blend with camera preview |
+| | • Strict constraints (memory, latency, thermal) |
+| | • Different languages (C++, Java, Kotlin, Swift) |
+| | • Raw tensor I/O only |
 
 **Hand-off: Fragmented Workflow**
 
 → Weeks of effort lost on every model iteration.
-
----
-
-
-
-
-## Slide 4: The Current Ecosystem — The "Silo" Problem
-
-AI development is currently divided into two distinct worlds:
-
-**Research (Python)**
-- Rapid iteration
-- Huge libraries (Keras, HuggingFace)
-- Unlimited compute resources
-- `model.generate()` in one line
-
-**Production (Edge)**
-- Strict constraints (memory, latency, thermal)
-- Different languages (C++, Java, Kotlin, Swift)
-- Limited compute
-- Raw tensor I/O only
 
 The gap between these worlds is why models die in Jupyter notebooks.
 
@@ -89,7 +73,8 @@ The gap between these worlds is why models die in Jupyter notebooks.
 
 
 
-## Slide 5: Why We Need Export to LiteRT?
+
+## Slide 4: Why We Need Export to LiteRT?
 
 **The KerasHub trap:**
 - Currently KerasHub models are only usable through the Python API.
@@ -110,7 +95,8 @@ The gap between these worlds is why models die in Jupyter notebooks.
 
 
 
-## Slide 6: Tax 1 — The Framework Rewrite
+
+## Slide 5: Tax 1 — The Framework Rewrite
 
 ```python
 # PyTorch research is equally concise
@@ -148,7 +134,8 @@ Same model. Same math. **100× more code.**
 
 
 
-## Slide 7: Tax 1 — It Gets Worse With PyTorch or JAX
+
+## Slide 6: Tax 1 — It Gets Worse With PyTorch or JAX
 
 The rewrite tax is **not just a Keras → TF problem.**
 
@@ -166,7 +153,8 @@ The rewrite tax is **not just a Keras → TF problem.**
 
 
 
-## Slide 8: Tax 2 — Post-Processing on Device
+
+## Slide 7: Tax 2 — Post-Processing on Device
 
 Even after the model runs, **raw tensors are useless.** You must rebuild the "last mile" in Java/Kotlin/C++.
 
@@ -196,7 +184,8 @@ Even after the model runs, **raw tensors are useless.** You must rebuild the "la
 
 
 
-## Slide 9: Tax 2 — The Post-Processing Gap
+
+## Slide 8: Tax 2 — The Post-Processing Gap
 
 ```mermaid
 flowchart LR
@@ -218,7 +207,8 @@ flowchart LR
 
 
 
-## Slide 10: Alternatives — Domain-Specific Solutions
+
+## Slide 9: Alternatives — Domain-Specific Solutions
 
 **OpenCV, MediaPipe, Apple Vision, and QNN reduce post-processing, but they are domain-specific.**
 
@@ -250,7 +240,8 @@ flowchart LR
 
 
 
-## Slide 11: The Full Pain — Both Taxes Together
+
+## Slide 10: The Full Pain — Both Taxes Together
 
 ```mermaid
 flowchart LR
@@ -276,7 +267,8 @@ flowchart LR
 
 
 
-## Slide 12: What is LiteRT?
+
+## Slide 11: What is LiteRT?
 
 LiteRT (formerly TensorFlow Lite) is Google's on-device runtime for neural network inference.
 
@@ -291,7 +283,8 @@ LiteRT (formerly TensorFlow Lite) is Google's on-device runtime for neural netwo
 
 
 
-## Slide 13: The Runtime Landscape
+
+## Slide 12: The Runtime Landscape
 
 Keras models need to run on diverse high-performance runtimes.
 
@@ -311,7 +304,8 @@ Our goal: **one Keras model → multiple optimized runtimes** with zero rewrites
 
 
 
-## Slide 14: How LiteRT Export Changes Everything
+
+## Slide 13: How LiteRT Export Changes Everything
 
 **Old workflow:**
 
@@ -360,7 +354,8 @@ model.export("model.tflite", format="litert")
 
 
 
-## Slide 15: High-Level Flow — Keras to Device
+
+## Slide 14: High-Level Flow — Keras to Device
 
 Detailed architecture matching the original PPT Slide 12/13:
 
@@ -427,7 +422,8 @@ flowchart TB
 
 
 
-## Slide 16: Dual-Backend Export Pipelines
+
+## Slide 15: Dual-Backend Export Pipelines
 
 Keras 3 is backend-agnostic. The export API uses different compilers depending on `KERAS_BACKEND`.
 
@@ -473,7 +469,8 @@ flowchart LR
 
 
 
-## Slide 17: Verified Export Code — TensorFlow Backend
+
+## Slide 16: Verified Export Code — TensorFlow Backend
 
 ```python
 import os
@@ -501,7 +498,8 @@ model.export("gemma3_270m_tf.tflite", format="litert")
 
 
 
-## Slide 18: Verified Export Code — PyTorch Backend
+
+## Slide 17: Verified Export Code — PyTorch Backend
 
 ```python
 import os
@@ -543,7 +541,8 @@ model.export(
 
 
 
-## Slide 19: Quantization — Two Paths, Your Choice
+
+## Slide 18: Quantization — Two Paths, Your Choice
 
 The export API gives you a clean, numerically correct FP32 model. What you do next is your call.
 
@@ -606,7 +605,8 @@ A medical app and a chat demo have different accuracy budgets. A 270M model and 
 
 
 
-## Slide 20: What You Bring — Android Application Code
+
+## Slide 19: What You Bring — Android Application Code
 
 LiteRT gives you a `.tflite` flatbuffer. The rest is your product.
 
@@ -640,7 +640,8 @@ val text = tokenizer.detokenize(generatedTokens)
 
 
 
-## Slide 21: LiteRT-LM Will Eliminate Tax 2 (Generative Models)
+
+## Slide 20: LiteRT-LM Will Eliminate Tax 2 (Generative Models)
 
 LiteRT export eliminates the **model rewrite tax (Tax 1)**.
 
@@ -685,7 +686,8 @@ flowchart LR
 
 
 
-## Slide 22: LiteRT vs LiteRT-LM — Clear Distinction
+
+## Slide 21: LiteRT vs LiteRT-LM — Clear Distinction
 
 ```mermaid
 flowchart LR
@@ -736,7 +738,8 @@ flowchart LR
 
 
 
-## Slide 23: LiteRT-LM — What's Inside the Bundle
+
+## Slide 22: LiteRT-LM — What's Inside the Bundle
 
 A `.litertlm` file is not just a `.tflite` — it's a **Task Bundle** containing three assets:
 
@@ -764,7 +767,8 @@ The runtime calls `prefill` once per turn, then loops on `decode` until a stop t
 
 
 
-## Slide 24: LiteRT-LM Export API (PyTorch Backend Only)
+
+## Slide 23: LiteRT-LM Export API (PyTorch Backend Only)
 
 ```python
 import os
@@ -794,7 +798,8 @@ model.export(
 
 
 
-## Slide 25: LiteRT-LM Android Runtime
+
+## Slide 24: LiteRT-LM Android Runtime
 
 **Single dependency:**
 
@@ -841,7 +846,8 @@ conversation.sendMessageAsync("Hello").collect { token ->
 
 
 
-## Slide 26: LiteRT-LM — Current Limitations
+
+## Slide 25: LiteRT-LM — Current Limitations
 
 | Limitation | Detail |
 |------------|--------|
@@ -860,7 +866,8 @@ conversation.sendMessageAsync("Hello").collect { token ->
 
 
 
-## Slide 27: LiteRT-LM Before vs After
+
+## Slide 26: LiteRT-LM Before vs After
 
 **Before (raw LiteRT):**
 
@@ -886,7 +893,8 @@ conversation.sendMessageAsync("What is Keras?")
 
 
 
-## Slide 28: Upcoming Challenges & Opportunities
+
+## Slide 27: Upcoming Challenges & Opportunities
 
 | Item | Status | Path Forward |
 |------|--------|--------------|
@@ -913,7 +921,8 @@ The `tf.lite` module is deprecated. The existing `tf.lite.TFLiteConverter` API m
 
 
 
-## Slide 29: Production Checklist
+
+## Slide 28: Production Checklist
 
 - [ ] Choose backend: **TensorFlow** (proven) or **PyTorch** (explicit `input_signature`)
 - [ ] Export FP32 `.tflite` and verify with `ai_edge_litert.interpreter.Interpreter`
@@ -928,7 +937,8 @@ The `tf.lite` module is deprecated. The existing `tf.lite.TFLiteConverter` API m
 
 
 
-## Slide 30: References
+
+## Slide 29: References
 
 | Repository | Role |
 |-----------|------|
@@ -946,7 +956,8 @@ The `tf.lite` module is deprecated. The existing `tf.lite.TFLiteConverter` API m
 
 
 
-## Slide 31: Thank You
+
+## Slide 30: Thank You
 
 **Questions?**
 
